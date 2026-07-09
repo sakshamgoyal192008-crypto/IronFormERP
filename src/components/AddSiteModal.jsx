@@ -1,6 +1,13 @@
 import { useState } from "react";
+import { db } from "../services/firebase";
+import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
 
-function AddSiteModal({ isOpen, onClose, sites, setSites }) {
+function AddSiteModal({
+  isOpen,
+  onClose,
+  editSite,
+  fetchSites,
+}) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [manager, setManager] = useState("");
@@ -8,40 +15,45 @@ function AddSiteModal({ isOpen, onClose, sites, setSites }) {
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name || !location || !manager) {
       alert("Please fill all fields");
       return;
     }
 
     const newSite = {
-      id: Date.now(),
       name,
       location,
       manager,
       status,
+      createdAt: new Date(),
     };
 
-    setSites([...sites, newSite]);
+    try {
+      await addDoc(collection(db, "sites"), newSite);
 
-    setName("");
-    setLocation("");
-    setManager("");
-    setStatus("Active");
+      alert("✅ Site Added Successfully");
 
-    onClose();
+      setName("");
+      setLocation("");
+      setManager("");
+      setStatus("Active");
+
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error adding site");
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
       <div className="bg-white rounded-xl w-[500px] p-6 shadow-xl">
-
         <h2 className="text-2xl font-bold mb-6">
           Add New Site
         </h2>
 
         <div className="space-y-4">
-
           <input
             type="text"
             placeholder="Site Name"
@@ -74,11 +86,9 @@ function AddSiteModal({ isOpen, onClose, sites, setSites }) {
             <option>Active</option>
             <option>Pending</option>
           </select>
-
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-
           <button
             onClick={onClose}
             className="px-5 py-2 rounded-lg bg-gray-200"
@@ -92,9 +102,7 @@ function AddSiteModal({ isOpen, onClose, sites, setSites }) {
           >
             Save Site
           </button>
-
         </div>
-
       </div>
     </div>
   );

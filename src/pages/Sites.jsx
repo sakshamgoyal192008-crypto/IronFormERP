@@ -1,12 +1,49 @@
-import { useState } from "react";
-import { sitesData } from "../data/sitesData";
+import { useState, useEffect } from "react";
 import AddSiteModal from "../components/AddSiteModal";
+import { db } from "../services/firebase";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 
 function Sites() {
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [sites, setSites] = useState(sitesData);
+  const [sites, setSites] = useState([]);
 
+  useEffect(() => {
+    fetchSites();
+  }, []);
+
+  const fetchSites = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "sites"));
+
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setSites(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+const handleDelete = async (id) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this site?"
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+    await deleteDoc(doc(db, "sites", id));
+
+    fetchSites();
+
+    alert("✅ Site Deleted Successfully");
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error deleting site");
+  }
+};
   const filteredSites = sites.filter((site) =>
     site.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -40,6 +77,7 @@ function Sites() {
               <th className="text-left p-4">Location</th>
               <th className="text-left p-4">Manager</th>
               <th className="text-left p-4">Status</th>
+           <th className="text-left p-4">Action</th>
             </tr>
           </thead>
 
@@ -60,7 +98,15 @@ function Sites() {
                     {site.status}
                   </span>
                 </td>
-              </tr>
+              <td className="p-4">
+  <button
+    onClick={() => handleDelete(site.id)}
+    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+  >
+    Delete
+  </button>
+</td>
+</tr>
             ))}
           </tbody>
         </table>
@@ -68,9 +114,10 @@ function Sites() {
 
       <AddSiteModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        sites={sites}
-        setSites={setSites}
+        onClose={() => {
+          setIsModalOpen(false);
+          fetchSites();
+        }}
       />
     </>
   );
